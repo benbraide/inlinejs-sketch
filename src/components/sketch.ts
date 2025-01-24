@@ -1,4 +1,4 @@
-import { IElementScopeCreatedCallbackParams, JournalTry, ToString } from "@benbraide/inlinejs";
+import { IElementScopeCreatedCallbackParams, JournalTry, ToString, ResizeObserver } from "@benbraide/inlinejs";
 import { CustomElement, Property, RegisterCustomElement } from "@benbraide/inlinejs-element";
 import { ISketchPlugin, SketchDrawStageType } from "../types";
 
@@ -8,6 +8,9 @@ export class SketchElement extends CustomElement{
 
     protected isDrawing_ = false;
     protected plugins_: Record<string, Array<ISketchPlugin>> = {};
+
+    protected resizeObserver_: ResizeObserver | null = null;
+    protected fit_ = false;
 
     @Property({ type: 'object', checkStoredObject: true })
     public plugin: Array<string> | string = '';
@@ -25,6 +28,14 @@ export class SketchElement extends CustomElement{
     public UpdateHeightProperty(value: number){
         this.style.height = `${value}px`;
         this.shadow_?.setAttribute('height', ToString(value));
+    }
+
+    @Property({ type: 'boolean' })
+    public UpdateFitProperty(value: boolean){
+        if (this.fit_ !== value){
+            this.fit_ = value;
+            this.UpdateFit_();
+        }
     }
 
     public constructor(){
@@ -64,10 +75,27 @@ export class SketchElement extends CustomElement{
     protected HandleElementScopeCreated_({ scope, ...rest }: IElementScopeCreatedCallbackParams, postAttributesCallback?: (() => void) | undefined){
         super.HandleElementScopeCreated_({ scope, ...rest }, postAttributesCallback);
         scope.AddUninitCallback(() => (this.shadow_ = null));
+
+        super.HandleElementScopeCreated_({ scope, ...rest }, () => {
+            this.resizeObserver_ = new ResizeObserver();
+            this.resizeObserver_.Observe(this.parentElement || this, () => this.UpdateFit_());
+            postAttributesCallback && postAttributesCallback();
+        });
+
+        scope.AddUninitCallback(() => {
+            this.resizeObserver_?.Unobserve(this.parentElement || this);
+            this.resizeObserver_ = null;
+            this.shadow_ = null;
+        });
+
         scope.AddPostProcessCallback(() => this.InitializeShadow_());
     }
 
     protected InitializeShadow_(){
+        if (this.shadow_){
+            return;
+        }
+        
         this.shadow_ = document.createElement('canvas');
 
         this.shadow_.setAttribute('width', (this.getAttribute('width') || '0'));
@@ -122,6 +150,8 @@ export class SketchElement extends CustomElement{
         });
 
         Object.values(this.plugins_).forEach(plugins => plugins.forEach(plugin => plugin.SetCanvas(this.shadow_)));
+
+        this.UpdateFit_();
     }
 
     protected BeginDraw_(offsetX: number, offsetY: number){
@@ -155,6 +185,13 @@ export class SketchElement extends CustomElement{
         }
         else{//Call all plugins
             Object.values(this.plugins_).forEach((plugins) => plugins.forEach(plugin => JournalTry(() => plugin.Handle({ stage, offsetX, offsetY }))));
+        }
+    }
+
+    protected UpdateFit_(){
+        if (this.fit_ || !this.shadow_){
+            this.UpdateWidthProperty(this.parentElement?.clientWidth || 0);
+            this.UpdateHeightProperty(this.parentElement?.clientHeight || 0);
         }
     }
 }

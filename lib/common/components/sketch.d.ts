@@ -1,4 +1,4 @@
-import { IElementScopeCreatedCallbackParams } from "@benbraide/inlinejs";
+import { IElementScopeCreatedCallbackParams, ResizeObserver } from "@benbraide/inlinejs";
 import { CustomElement } from "@benbraide/inlinejs-element";
 import { ISketchPlugin, SketchDrawStageType } from "../types";
 export declare class SketchElement extends CustomElement {
@@ -6,10 +6,13 @@ export declare class SketchElement extends CustomElement {
     protected ctx_: CanvasRenderingContext2D | null;
     protected isDrawing_: boolean;
     protected plugins_: Record<string, Array<ISketchPlugin>>;
+    protected resizeObserver_: ResizeObserver | null;
+    protected fit_: boolean;
     plugin: Array<string> | string;
     disabled: boolean;
     UpdateWidthProperty(value: number): void;
     UpdateHeightProperty(value: number): void;
+    UpdateFitProperty(value: boolean): void;
     constructor();
     GetContext(): CanvasRenderingContext2D | null;
     GetNative(): HTMLCanvasElement | null;
@@ -23,5 +26,6 @@ export declare class SketchElement extends CustomElement {
     protected EndDraw_(offsetX: number, offsetY: number): void;
     protected Draw_(offsetX: number, offsetY: number): void;
     protected CallPlugins_(stage: SketchDrawStageType, offsetX: number, offsetY: number): void;
+    protected UpdateFit_(): void;
 }
 export declare function SketchElementCompact(): void;

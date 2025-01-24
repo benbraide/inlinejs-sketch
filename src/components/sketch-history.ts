@@ -24,66 +24,86 @@ export class SketchHistoryElement extends SketchPluginElement{
     }
 
     public Undo(){
-        if (!this.canvas_ || this.index_ == 0 || this.entries_.length == 0){
-            return;
-        }
-        
-        const ctx = this.canvas_.getContext('2d');
-        if (!ctx){
-            return;
-        }
-        
-        const image = new Image();
+        this.Restore_(() => this.index_ > 0 && this.entries_.length > 0, () => {
+            if (this.isSaved_){
+                return this.entries_[this.index_ -= ((this.savedBeforeUndo_ && this.index_ >= this.entries_.length) ? 2 : 1)];
+            }
 
-        image.onload = () => {
-            ctx.clearRect(0, 0, this.canvas_!.width, this.canvas_!.height);
-            ctx.drawImage(image, 0, 0);
-        };
-        
-        if (!this.isSaved_){
             this.Save_();
             this.savedBeforeUndo_ = true;
-            image.src = this.entries_[this.index_ -= 2];
-        }
-        else{
-            image.src = this.entries_[this.index_ -= ((this.savedBeforeUndo_ && this.index_ >= this.entries_.length) ? 2 : 1)];
-        }
+
+            return this.entries_[this.index_ -= 2];
+        });
     }
 
     public Redo(){
-        if (!this.canvas_ || this.index_ == this.entries_.length){
-            return;
-        }
-        
-        const ctx = this.canvas_.getContext('2d');
-        if (!ctx){
-            return;
-        }
-        
-        const image = new Image();
-
-        image.onload = () => {
-            ctx.clearRect(0, 0, this.canvas_!.width, this.canvas_!.height);
-            ctx.drawImage(image, 0, 0);
-        };
-        
-        image.src = this.entries_[++this.index_];
-        this.index_ = ((this.savedBeforeUndo_ && this.index_ >= (this.entries_.length - 1)) ? this.entries_.length : this.index_);
+        this.Restore_(() => this.index_ < this.entries_.length, () => this.entries_[++this.index_], () => {
+            this.index_ = ((this.savedBeforeUndo_ && this.index_ >= (this.entries_.length - 1)) ? this.entries_.length : this.index_);
+        });
     }
 
     public Reset(){
+        this.Restore_(() => true, () => null, (ctx) => {
+            ctx.clearRect(0, 0, this.canvas_!.width, this.canvas_!.height);
+            this.index_ = 0;
+            this.entries_ = new Array<string>();
+        });
+    }
+
+    public Has(){
+        return this.entries_.length > 0;
+    }
+    
+    public CanUndo(){
+        return this.index_ > 0 && this.entries_.length > 0;
+    }
+
+    public CanRedo(){
+        return this.index_ >= 0 && this.index_ < this.entries_.length;
+    }
+
+    public LoadImage(url: any){
         if (!this.canvas_){
             return;
         }
         
-        const ctx = this.canvas_.getContext('2d');
-        if (!ctx){
+        const native = this.canvas_, image = new Image();
+        image.onload = () => {
+            const ctx = native.getContext('2d');
+            
+            ctx?.clearRect(0, 0, native.width, native.height);
+            ctx?.drawImage(image, 0, 0);
+
+            this.Save_();
+        };
+
+        image.src = url;
+    }
+
+    protected Restore_(pred: () => boolean, before: () => string | null, after?: (ctx: CanvasRenderingContext2D) => void){
+        const canvas = this.canvas_;
+        if (!canvas || !pred()){
             return;
         }
         
-        ctx.clearRect(0, 0, this.canvas_!.width, this.canvas_!.height);
-        this.index_ = 0;
-        this.entries_ = new Array<string>();
+        const ctx = canvas.getContext('2d');
+        if (!ctx){// Context missing
+            return;
+        }
+
+        const src = before();
+        if (src){// Draw image
+            const image = new Image();
+
+            image.onload = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(image, 0, 0);
+            };
+            
+            image.src = src;
+        }
+
+        after?.(ctx);
     }
 
     protected Save_(){

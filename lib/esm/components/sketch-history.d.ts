@@ -11,6 +11,11 @@ export declare class SketchHistoryElement extends SketchPluginElement {
     Undo(): void;
     Redo(): void;
     Reset(): void;
+    Has(): boolean;
+    CanUndo(): boolean;
+    CanRedo(): boolean;
+    LoadImage(url: any): void;
+    protected Restore_(pred: () => boolean, before: () => string | null, after?: (ctx: CanvasRenderingContext2D) => void): void;
     protected Save_(): void;
 }
 export declare function SketchHistoryElementCompact(): void;
