@@ -6,7 +6,7 @@ export class SketchLineElement extends SketchLineToolElement{
         super('line');
     }
     
-    protected HandleDraw_(ctx: CanvasRenderingContext2D, offsetX: number, offsetY: number){
+    protected HandleShapeDraw_(ctx: CanvasRenderingContext2D, offsetX: number, offsetY: number){
         ctx.moveTo(this.saved_.x, this.saved_.y);
         ctx.lineTo(offsetX, offsetY);
         ctx.stroke();

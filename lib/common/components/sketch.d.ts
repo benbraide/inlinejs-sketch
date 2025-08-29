@@ -5,6 +5,9 @@ export declare class SketchElement extends CustomElement {
     protected shadow_: HTMLCanvasElement | null;
     protected ctx_: CanvasRenderingContext2D | null;
     protected isDrawing_: boolean;
+    protected windowMouseUpHandler_: ((event: MouseEvent) => void) | null;
+    protected windowTouchEndHandler_: ((event: TouchEvent) => void) | null;
+    protected windowTouchCancelHandler_: ((event: TouchEvent) => void) | null;
     protected plugins_: Record<string, Array<ISketchPlugin>>;
     protected resizeObserver_: ResizeObserver | null;
     protected fit_: boolean;

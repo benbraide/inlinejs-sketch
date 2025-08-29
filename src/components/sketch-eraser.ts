@@ -16,7 +16,7 @@ export class SketchEraserElement extends SketchPluginElement{
             ctx.save();
             ctx.globalCompositeOperation = 'destination-out';
             ctx.beginPath();
-            ctx.arc(offsetX, offsetY, this.radius, 0, (2 * Math.PI));
+            ctx.arc(offsetX, offsetY, Math.abs(this.radius), 0, (2 * Math.PI));
             ctx.fill();
             ctx.restore();
         }

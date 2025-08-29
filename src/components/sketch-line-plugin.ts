@@ -4,7 +4,7 @@ import { ISketchPluginParams } from "../types";
 
 export class SketchLinePluginElement extends SketchPluginElement{
     @Property({ type: 'string' })
-    public color = 'black';
+    public color = '';
 
     @Property({ type: 'number' })
     public lineWidth = 1;
@@ -21,12 +21,8 @@ export class SketchLinePluginElement extends SketchPluginElement{
         if (ctx){
             ctx.lineCap = this.lineCap;
             ctx.lineWidth = this.lineWidth;
-            ctx.strokeStyle = this.color;
+            ctx.strokeStyle = this.color || 'black';
             ctx.moveTo(offsetX, offsetY);
         }
-    }
-
-    public HandleEndDraw(params: ISketchPluginParams){
-        this.canvas_?.getContext('2d')?.closePath();
     }
 }

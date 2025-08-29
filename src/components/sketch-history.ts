@@ -1,12 +1,10 @@
 import { Property, RegisterCustomElement } from "@benbraide/inlinejs-element";
+import { IElementScopeCreatedCallbackParams } from "@benbraide/inlinejs";
 import { SketchPluginElement } from "./sketch-plugin";
 
 export class SketchHistoryElement extends SketchPluginElement{
     protected index_ = 0;
     protected entries_ = new Array<string>();
-
-    protected isSaved_ = false;
-    protected savedBeforeUndo_ = false;
     
     @Property({  type: 'number' })
     public size = -1;
@@ -15,39 +13,50 @@ export class SketchHistoryElement extends SketchPluginElement{
         super('history');
     }
 
-    public HandleBeginDraw(){
-        this.Save_();
+    public GetPriority(): number {
+        return -1000; // Run after other plugins
     }
 
+    public SetCanvas(canvas: HTMLCanvasElement | null): void{
+        super.SetCanvas(canvas);
+        if (this.entries_.length > 0){
+            this.Reset();
+        }
+        else{
+            this.canvas_ && (this.entries_ = [this.canvas_.toDataURL('image/png')]);
+        }
+    }
+
+    public HandleStartDraw(){
+        this.Snapshot_();
+    }
+    
     public HandleEndDraw(){
-        this.isSaved_ = false;
+        this.Snapshot_();
     }
 
     public Undo(){
-        this.Restore_(() => this.index_ > 0 && this.entries_.length > 0, () => {
-            if (this.isSaved_){
-                return this.entries_[this.index_ -= ((this.savedBeforeUndo_ && this.index_ >= this.entries_.length) ? 2 : 1)];
-            }
-
-            this.Save_();
-            this.savedBeforeUndo_ = true;
-
-            return this.entries_[this.index_ -= 2];
-        });
+        if (this.CanUndo()){
+            this.Restore_(this.entries_[--this.index_]);
+        }
     }
 
     public Redo(){
-        this.Restore_(() => this.index_ < this.entries_.length, () => this.entries_[++this.index_], () => {
-            this.index_ = ((this.savedBeforeUndo_ && this.index_ >= (this.entries_.length - 1)) ? this.entries_.length : this.index_);
-        });
+        if (this.CanRedo()){
+            this.Restore_(this.entries_[++this.index_]);
+        }
     }
 
     public Reset(){
-        this.Restore_(() => true, () => null, (ctx) => {
-            ctx.clearRect(0, 0, this.canvas_!.width, this.canvas_!.height);
+        const ctx = this.canvas_?.getContext('2d');
+        if (ctx && this.canvas_){
+            if (this.entries_.length > 0){
+                this.Restore_(this.entries_[0]);
+                this.entries_.splice(1);
+            }
+            
             this.index_ = 0;
-            this.entries_ = new Array<string>();
-        });
+        }
     }
 
     public Has(){
@@ -55,11 +64,11 @@ export class SketchHistoryElement extends SketchPluginElement{
     }
     
     public CanUndo(){
-        return this.index_ > 0 && this.entries_.length > 0;
+        return (this.index_ > 0);
     }
 
     public CanRedo(){
-        return this.index_ >= 0 && this.index_ < this.entries_.length;
+        return (this.index_ < (this.entries_.length - 1));
     }
 
     public LoadImage(url: any){
@@ -74,15 +83,20 @@ export class SketchHistoryElement extends SketchPluginElement{
             ctx?.clearRect(0, 0, native.width, native.height);
             ctx?.drawImage(image, 0, 0);
 
-            this.Save_();
+            this.Snapshot_();
         };
 
         image.src = url;
     }
 
-    protected Restore_(pred: () => boolean, before: () => string | null, after?: (ctx: CanvasRenderingContext2D) => void){
+    protected HandleElementScopeCreated_(params: IElementScopeCreatedCallbackParams, postAttributesCallback?: (() => void) | undefined): void {
+        super.HandleElementScopeCreated_(params, postAttributesCallback);
+        params.scope.AddPostProcessCallback(() => this.canvas_ && this.Reset());
+    }
+
+    protected Restore_(src: string){
         const canvas = this.canvas_;
-        if (!canvas || !pred()){
+        if (!canvas || !src){
             return;
         }
         
@@ -90,34 +104,32 @@ export class SketchHistoryElement extends SketchPluginElement{
         if (!ctx){// Context missing
             return;
         }
-
-        const src = before();
-        if (src){// Draw image
-            const image = new Image();
-
-            image.onload = () => {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(image, 0, 0);
-            };
-            
-            image.src = src;
-        }
-
-        after?.(ctx);
+        
+        const image = new Image();
+        image.onload = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(image, 0, 0);
+        };
+        
+        image.src = src;
     }
 
-    protected Save_(){
-        if (!this.canvas_ || this.isSaved_ || !this.size){
+    protected Snapshot_(){
+        if (!this.canvas_ || !this.size){
             return;
         }
 
-        const image = this.canvas_.toDataURL('image/png');
-        (this.size > 0 && this.entries_.length >= this.size) && this.entries_.shift();
-        (this.index_ < this.entries_.length) ? this.entries_.splice(this.index_, (this.entries_.length - this.index_), image) : this.entries_.push(image);
+        if (this.index_ < (this.entries_.length - 1)){//Remove redo entries
+            this.entries_.splice(this.index_ + 1);
+        }
 
-        this.index_ = this.entries_.length;
-        this.isSaved_ = true;
-        this.savedBeforeUndo_ = false;
+        if (this.size > 0 && this.entries_.length >= this.size){
+            this.entries_.shift();
+            this.index_ -= 1;
+        }
+
+        this.entries_.push(this.canvas_.toDataURL('image/png'));
+        this.index_ = this.entries_.length - 1;
     }
 }
 

@@ -2,8 +2,14 @@ import { CustomElement, Property } from "@benbraide/inlinejs-element";
 import { ISketchPlugin, ISketchPluginParams } from "../types";
 import { FindAncestor, IElementScopeCreatedCallbackParams } from "@benbraide/inlinejs";
 
+interface ISketchHost extends HTMLElement{
+    AddPlugin(plugin: ISketchPlugin): void;
+    RemovePlugin(plugin: ISketchPlugin): void;
+}
+
 export class SketchPluginElement extends CustomElement implements ISketchPlugin{
     protected canvas_: HTMLCanvasElement | null = null;
+    protected sketchHost_: ISketchHost | null = null;
 
     @Property({  type: 'string' })
     public name = '';
@@ -24,11 +30,15 @@ export class SketchPluginElement extends CustomElement implements ISketchPlugin{
         return this.name;
     }
 
+    public GetPriority(): number {
+        return 0; // Neutral priority
+    }
+
     public SetCanvas(canvas: HTMLCanvasElement | null): void{
         this.canvas_ = canvas;
     }
     
-    public Handle({ stage, ...rest }: ISketchPluginParams){
+    public Handle({ stage, ...rest }: ISketchPluginParams): void | boolean{
         if (this.disabled){
             return;
         }
@@ -48,15 +58,15 @@ export class SketchPluginElement extends CustomElement implements ISketchPlugin{
 
     protected HandleElementScopeCreated_({ scope, ...rest }: IElementScopeCreatedCallbackParams, postAttributesCallback?: (() => void) | undefined){
         super.HandleElementScopeCreated_({ scope, ...rest }, () => {
-            const ancestor = FindAncestor(this, ancestor => ('AddPlugin' in ancestor));
-            ancestor && (ancestor as any).AddPlugin(this);
+            this.sketchHost_ = FindAncestor(this, ancestor => ('AddPlugin' in ancestor && 'RemovePlugin' in ancestor)) as ISketchHost | null;
+            this.sketchHost_?.AddPlugin(this);
             postAttributesCallback && postAttributesCallback();
         });
 
         scope.AddUninitCallback(() => {
             this.canvas_ = null;
-            const ancestor = FindAncestor(this, ancestor => ('RemovePlugin' in ancestor));
-            ancestor && (ancestor as any).RemovePlugin(this);
+            this.sketchHost_?.RemovePlugin(this);
+            this.sketchHost_ = null;
         });
     }
 }

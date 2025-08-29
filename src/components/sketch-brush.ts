@@ -3,6 +3,9 @@ import { SketchPluginElement } from "./sketch-plugin";
 import { ISketchPluginParams } from "../types";
 
 export class SketchBrushElement extends SketchPluginElement{
+    @Property({  type: 'string' })
+    public color = '';
+
     @Property({  type: 'number' })
     public radius = 5;
 
@@ -14,8 +17,9 @@ export class SketchBrushElement extends SketchPluginElement{
         const ctx = this.canvas_?.getContext('2d');
         if (ctx){
             ctx.save();
+            ctx.fillStyle = this.color || 'black';
             ctx.beginPath();
-            ctx.arc(offsetX, offsetY, this.radius, 0, (2 * Math.PI));
+            ctx.arc(offsetX, offsetY, Math.abs(this.radius), 0, (2 * Math.PI));
             ctx.fill();
             ctx.restore();
         }

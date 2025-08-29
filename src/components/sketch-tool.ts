@@ -1,65 +1,86 @@
 import { SketchPluginElement } from "./sketch-plugin";
 import { ISketchPluginParams } from "../types";
 
-export class SketchToolElement extends SketchPluginElement{
+export class SketchToolElement extends SketchPluginElement {
+    // Off-screen canvas to hold the state before drawing starts
+    protected offscreenCanvas_: HTMLCanvasElement | null = null;
+    protected offscreenCtx_: CanvasRenderingContext2D | null = null;
+
     protected saved_ = {
-        image: <string | null>null,
         x: 0,
         y: 0,
     };
-    
-    protected checkpoint_ = 0;
 
-    public constructor(name?: string){
+    public constructor(name?: string) {
         super(name);
     }
 
     public HandleBeginDraw({ offsetX, offsetY }: ISketchPluginParams): boolean | void {
+        if (!this.canvas_) {
+            return;
+        }
+
+        // Create or resize the off-screen canvas
+        if (!this.offscreenCanvas_ || this.offscreenCanvas_.width !== this.canvas_.width || this.offscreenCanvas_.height !== this.canvas_.height) {
+            this.offscreenCanvas_ = document.createElement('canvas');
+            this.offscreenCanvas_.width = this.canvas_.width;
+            this.offscreenCanvas_.height = this.canvas_.height;
+            this.offscreenCtx_ = this.offscreenCanvas_.getContext('2d');
+        }
+
+        // Save the current canvas state to the off-screen canvas
+        this.offscreenCtx_?.drawImage(this.canvas_, 0, 0);
+
         this.saved_ = {
-            image: (this.canvas_?.toDataURL() || null),
             x: offsetX,
             y: offsetY,
         };
     }
 
-    public HandleEndDraw(){
+    public HandleEndDraw({ offsetX, offsetY }: ISketchPluginParams) {
+        const ctx = this.canvas_?.getContext('2d');
+        if (ctx && this.offscreenCanvas_) {
+            // Restore the original state from the off-screen canvas to the main canvas
+            ctx.clearRect(0, 0, this.canvas_!.width, this.canvas_!.height);
+            ctx.drawImage(this.offscreenCanvas_, 0, 0);
+
+            // Draw the final shape onto the main canvas
+            ctx.save();
+            ctx.beginPath();
+            this.HandleDraw_(ctx, offsetX, offsetY);
+            ctx.restore();
+        }
+
+        // Clean up
+        if (this.offscreenCtx_ && this.offscreenCanvas_) {
+            this.offscreenCtx_.clearRect(0, 0, this.offscreenCanvas_.width, this.offscreenCanvas_.height);
+        }
+        
+        this.offscreenCanvas_ = null;
+        this.offscreenCtx_ = null;
+
         this.saved_ = {
-            image: null,
             x: 0,
             y: 0,
         };
     }
-    
-    public HandleDraw({ offsetX, offsetY }: ISketchPluginParams){
+
+    public HandleDraw({ offsetX, offsetY }: ISketchPluginParams) {
         const ctx = this.canvas_?.getContext('2d');
-        if (!ctx){
+        if (!ctx || !this.offscreenCanvas_) {
             return;
         }
 
-        const checkpoint = ++this.checkpoint_, draw = (ctx: CanvasRenderingContext2D) => {
-            if (checkpoint == this.checkpoint_){
-                ctx.save();
-                ctx.beginPath();
-                this.HandleDraw_(ctx, offsetX, offsetY);
-                ctx.restore();
-            }
-        };
+        // Restore the original state from the off-screen canvas
+        ctx.clearRect(0, 0, this.canvas_!.width, this.canvas_!.height);
+        ctx.drawImage(this.offscreenCanvas_, 0, 0);
 
-        if (this.saved_.image){
-            const image = new Image();
-
-            image.onload = () => {
-                ctx.clearRect(0, 0, this.canvas_!.width, this.canvas_!.height);
-                ctx.drawImage(image, 0, 0);
-                draw(ctx);
-            };
-            
-            image.src = this.saved_.image;
-        }
-        else{
-            draw(ctx);
-        }
+        // Draw the current shape on top
+        ctx.save();
+        ctx.beginPath();
+        this.HandleDraw_(ctx, offsetX, offsetY);
+        ctx.restore();
     }
 
-    protected HandleDraw_(ctx: CanvasRenderingContext2D, offsetX: number, offsetY: number){}
+    protected HandleDraw_(ctx: CanvasRenderingContext2D, offsetX: number, offsetY: number) { }
 }

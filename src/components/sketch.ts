@@ -7,6 +7,11 @@ export class SketchElement extends CustomElement{
     protected ctx_: CanvasRenderingContext2D | null = null;
 
     protected isDrawing_ = false;
+
+    protected windowMouseUpHandler_: ((event: MouseEvent) => void) | null = null;
+    protected windowTouchEndHandler_: ((event: TouchEvent) => void) | null = null;
+    protected windowTouchCancelHandler_: ((event: TouchEvent) => void) | null = null;
+
     protected plugins_: Record<string, Array<ISketchPlugin>> = {};
 
     protected resizeObserver_: ResizeObserver | null = null;
@@ -73,9 +78,6 @@ export class SketchElement extends CustomElement{
     }
 
     protected HandleElementScopeCreated_({ scope, ...rest }: IElementScopeCreatedCallbackParams, postAttributesCallback?: (() => void) | undefined){
-        super.HandleElementScopeCreated_({ scope, ...rest }, postAttributesCallback);
-        scope.AddUninitCallback(() => (this.shadow_ = null));
-
         super.HandleElementScopeCreated_({ scope, ...rest }, () => {
             this.resizeObserver_ = new ResizeObserver();
             this.resizeObserver_.Observe(this.parentElement || this, () => this.UpdateFit_());
@@ -83,6 +85,11 @@ export class SketchElement extends CustomElement{
         });
 
         scope.AddUninitCallback(() => {
+            this.windowMouseUpHandler_ && window.removeEventListener('mouseup', this.windowMouseUpHandler_);
+            this.windowTouchEndHandler_ && window.removeEventListener('touchend', this.windowTouchEndHandler_);
+            this.windowTouchCancelHandler_ && window.removeEventListener('touchcancel', this.windowTouchCancelHandler_);
+            this.windowMouseUpHandler_ = this.windowTouchEndHandler_ = this.windowTouchCancelHandler_ = null;
+            
             this.resizeObserver_?.Unobserve(this.parentElement || this);
             this.resizeObserver_ = null;
             this.shadow_ = null;
@@ -110,23 +117,35 @@ export class SketchElement extends CustomElement{
         this.ctx_ = (this.shadow_.getContext('2d') || null);
         this.ctx_ && (this.ctx_.imageSmoothingQuality = 'high');
 
-        window.addEventListener('mouseup', (event) => {
-            (event.button === 0) && this.EndDraw_(event.offsetX, event.offsetY);
-        });
+        this.windowMouseUpHandler_ = (event) => {
+            if (event.button === 0 && this.shadow_){
+                const rect = this.shadow_.getBoundingClientRect();
+                this.EndDraw_(event.clientX - rect.left, event.clientY - rect.top);
+            }
+        };
+        window.addEventListener('mouseup', this.windowMouseUpHandler_);
 
-        window.addEventListener('touchend', (event) => {
-            const touch = event.changedTouches[0];
-            const offsetX = (touch.clientX - (touch.target as HTMLElement).offsetLeft);
-            const offsetY = (touch.clientY - (touch.target as HTMLElement).offsetTop);
-            this.EndDraw_(offsetX, offsetY);
-        });
+        this.windowTouchEndHandler_ = (event) => {
+            if (this.shadow_){
+                const touch = event.changedTouches[0];
+                if (touch){
+                    const rect = this.shadow_.getBoundingClientRect();
+                    this.EndDraw_(touch.clientX - rect.left, touch.clientY - rect.top);
+                }
+            }
+        };
+        window.addEventListener('touchend', this.windowTouchEndHandler_);
 
-        window.addEventListener('touchcancel', (event) => {
-            const touch = event.changedTouches[0];
-            const offsetX = (touch.clientX - (touch.target as HTMLElement).offsetLeft);
-            const offsetY = (touch.clientY - (touch.target as HTMLElement).offsetTop);
-            this.EndDraw_(offsetX, offsetY);
-        });
+        this.windowTouchCancelHandler_ = (event) => {
+            if (this.shadow_){
+                const touch = event.changedTouches[0];
+                if (touch){
+                    const rect = this.shadow_.getBoundingClientRect();
+                    this.EndDraw_(touch.clientX - rect.left, touch.clientY - rect.top);
+                }
+            }
+        };
+        window.addEventListener('touchcancel', this.windowTouchCancelHandler_);
 
         this.shadow_.addEventListener('mousedown', (event) => {
             (event.button === 0) && this.BeginDraw_(event.offsetX, event.offsetY);
@@ -134,18 +153,18 @@ export class SketchElement extends CustomElement{
 
         this.shadow_.addEventListener('touchstart', (event) => {
             event.preventDefault();
-            const touch = event.touches[0];
-            const offsetX = (touch.clientX - (touch.target as HTMLElement).offsetLeft);
-            const offsetY = (touch.clientY - (touch.target as HTMLElement).offsetTop);
+            const touch = event.touches[0], boundingRect = (touch.target as HTMLElement).getBoundingClientRect();
+            const offsetX = touch.clientX - boundingRect.left;
+            const offsetY = touch.clientY - boundingRect.top;
             this.BeginDraw_(offsetX, offsetY);
         });
 
         this.shadow_.addEventListener('mousemove', event => this.Draw_(event.offsetX, event.offsetY));
 
         this.shadow_.addEventListener('touchmove', (event) => {
-            const touch = event.touches[0];
-            const offsetX = (touch.clientX - (touch.target as HTMLElement).offsetLeft);
-            const offsetY = (touch.clientY - (touch.target as HTMLElement).offsetTop);
+            const touch = event.touches[0], boundingRect = (touch.target as HTMLElement).getBoundingClientRect();
+            const offsetX = touch.clientX - boundingRect.left;
+            const offsetY = touch.clientY - boundingRect.top;
             this.Draw_(offsetX, offsetY);
         });
 
@@ -178,18 +197,24 @@ export class SketchElement extends CustomElement{
     }
 
     protected CallPlugins_(stage: SketchDrawStageType, offsetX: number, offsetY: number){
-        if (this.plugin){//Call only specified plugins
+        const pluginsToCall: Array<ISketchPlugin> = [];
+        if (this.plugin) { // Call only specified plugins
             (Array.isArray(this.plugin) ? this.plugin : [this.plugin]).forEach((name) => {
-                (name in this.plugins_) && this.plugins_[name].forEach(plugin => JournalTry(() => plugin.Handle({ stage, offsetX, offsetY })));
+                (name in this.plugins_) && pluginsToCall.push(...this.plugins_[name]);
             });
         }
-        else{//Call all plugins
-            Object.values(this.plugins_).forEach((plugins) => plugins.forEach(plugin => JournalTry(() => plugin.Handle({ stage, offsetX, offsetY }))));
+        else { // Call all plugins
+            Object.values(this.plugins_).forEach((plugins) => pluginsToCall.push(...plugins));
         }
+
+        //Sort by priority, higher values run first. This ensures history (low priority) runs last.
+        pluginsToCall.sort((a, b) => (b.GetPriority() - a.GetPriority()));
+        
+        pluginsToCall.forEach(plugin => JournalTry(() => plugin.Handle({ stage, offsetX, offsetY })));
     }
 
     protected UpdateFit_(){
-        if (this.fit_ || !this.shadow_){
+        if (this.fit_){
             this.UpdateWidthProperty(this.parentElement?.clientWidth || 0);
             this.UpdateHeightProperty(this.parentElement?.clientHeight || 0);
         }

@@ -1,3 +1,4 @@
+export declare type SketchPaintModeType = 'fill' | 'stroke' | 'both';
 export declare type SketchDrawStageType = 'begin' | 'end' | 'draw';
 export interface ISketchPluginParams {
     stage: SketchDrawStageType;
@@ -6,6 +7,7 @@ export interface ISketchPluginParams {
 }
 export interface ISketchPlugin {
     GetName(): string;
+    GetPriority(): number;
     SetCanvas(canvas: HTMLCanvasElement | null): void;
     Handle(params: ISketchPluginParams): void;
 }

@@ -6,8 +6,8 @@ import { IElementScopeCreatedCallbackParams } from "@benbraide/inlinejs";
 export class SketchExportElement extends SketchPluginElement{
     protected hiddenInput_: HTMLInputElement | null = null;
     
-    @Property({  type: 'string' })
-    public UpdateNameProperty(value: string){
+    @Property({ type: 'string' })
+    public UpdateFieldProperty(value: string){
         this.hiddenInput_?.setAttribute('name', value);
     }
 
@@ -23,7 +23,7 @@ export class SketchExportElement extends SketchPluginElement{
         super.HandleElementScopeCreated_({ scope, ...rest }, () => {
             this.hiddenInput_ = document.createElement('input');
             this.hiddenInput_.type = 'hidden';
-            this.hiddenInput_.name = (this.getAttribute('name') || '');
+            this.hiddenInput_.name = (this.getAttribute('field') || '');
             this.hiddenInput_.value = '';
             this.appendChild(this.hiddenInput_);
 

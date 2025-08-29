@@ -6,5 +6,4 @@ export declare class SketchLinePluginElement extends SketchPluginElement {
     lineCap: CanvasLineCap;
     constructor(name?: string);
     HandleBeginDraw({ offsetX, offsetY }: ISketchPluginParams): void;
-    HandleEndDraw(params: ISketchPluginParams): void;
 }

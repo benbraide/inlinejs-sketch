@@ -6,12 +6,16 @@ export class SketchRectangleElement extends SketchLineToolElement{
         super('rectangle');
     }
     
-    protected HandleDraw_(ctx: CanvasRenderingContext2D, offsetX: number, offsetY: number){
-        if (this.mode === 'fill'){
-            ctx.fillRect(this.saved_.x, this.saved_.y, (offsetX - this.saved_.x), (offsetY - this.saved_.y));
+    protected HandleShapeDraw_(ctx: CanvasRenderingContext2D, offsetX: number, offsetY: number){
+        const width = offsetX - this.saved_.x;
+        const height = offsetY - this.saved_.y;
+        
+        if (this.mode === 'fill' || this.mode === 'both'){
+            ctx.fillRect(this.saved_.x, this.saved_.y, width, height);
         }
-        else{
-            ctx.strokeRect(this.saved_.x, this.saved_.y, (offsetX - this.saved_.x), (offsetY - this.saved_.y));
+
+        if (this.mode === 'stroke' || this.mode === 'both' || !this.mode){
+            ctx.strokeRect(this.saved_.x, this.saved_.y, width, height);
         }
     }
 }

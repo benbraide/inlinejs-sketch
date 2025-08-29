@@ -1,13 +1,19 @@
 import { Property } from "@benbraide/inlinejs-element";
 import { SketchToolElement } from "./sketch-tool";
-import { ISketchPluginParams } from "../types";
+import { ISketchPluginParams, SketchPaintModeType } from "../types";
 
-export class SketchLineToolElement extends SketchToolElement{
+export abstract class SketchLineToolElement extends SketchToolElement{
     @Property({ type: 'string' })
-    public color = 'black';
+    public color = '';
 
     @Property({ type: 'string' })
-    public mode = 'stroke';
+    public fillColor = '';
+
+    @Property({ type: 'string' })
+    public strokeColor = '';
+
+    @Property({ type: 'string' })
+    public mode: SketchPaintModeType = 'stroke';
 
     @Property({ type: 'number' })
     public lineWidth = 1;
@@ -21,13 +27,15 @@ export class SketchLineToolElement extends SketchToolElement{
 
     public HandleBeginDraw(params: ISketchPluginParams){
         super.HandleBeginDraw(params);
-        
-        const ctx = this.canvas_?.getContext('2d');
-        if (ctx){
-            ctx.lineCap = this.lineCap;
-            ctx.lineWidth = this.lineWidth;
-            ctx.strokeStyle = this.color;
-            ctx.fillStyle = this.color;
-        }
     }
+
+    protected HandleDraw_(ctx: CanvasRenderingContext2D, offsetX: number, offsetY: number){
+        ctx.lineCap = this.lineCap;
+        ctx.lineWidth = this.lineWidth;
+        ctx.strokeStyle = this.strokeColor || this.color || 'black';
+        ctx.fillStyle = this.fillColor || this.color || 'black';
+        this.HandleShapeDraw_(ctx, offsetX, offsetY);
+    }
+
+    protected abstract HandleShapeDraw_(ctx: CanvasRenderingContext2D, offsetX: number, offsetY: number): void;
 }

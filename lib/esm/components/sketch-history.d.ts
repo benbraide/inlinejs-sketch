@@ -1,12 +1,13 @@
+import { IElementScopeCreatedCallbackParams } from "@benbraide/inlinejs";
 import { SketchPluginElement } from "./sketch-plugin";
 export declare class SketchHistoryElement extends SketchPluginElement {
     protected index_: number;
     protected entries_: string[];
-    protected isSaved_: boolean;
-    protected savedBeforeUndo_: boolean;
     size: number;
     constructor();
-    HandleBeginDraw(): void;
+    GetPriority(): number;
+    SetCanvas(canvas: HTMLCanvasElement | null): void;
+    HandleStartDraw(): void;
     HandleEndDraw(): void;
     Undo(): void;
     Redo(): void;
@@ -15,7 +16,8 @@ export declare class SketchHistoryElement extends SketchPluginElement {
     CanUndo(): boolean;
     CanRedo(): boolean;
     LoadImage(url: any): void;
-    protected Restore_(pred: () => boolean, before: () => string | null, after?: (ctx: CanvasRenderingContext2D) => void): void;
-    protected Save_(): void;
+    protected HandleElementScopeCreated_(params: IElementScopeCreatedCallbackParams, postAttributesCallback?: (() => void) | undefined): void;
+    protected Restore_(src: string): void;
+    protected Snapshot_(): void;
 }
 export declare function SketchHistoryElementCompact(): void;

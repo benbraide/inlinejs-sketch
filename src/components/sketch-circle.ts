@@ -6,8 +6,10 @@ export class SketchCircleElement extends SketchLineToolElement{
         super('circle');
     }
     
-    protected HandleDraw_(ctx: CanvasRenderingContext2D, offsetX: number, offsetY: number){
-        const radius = Math.max(Math.abs(offsetX - this.saved_.x), Math.abs(offsetY - this.saved_.y));
+    protected HandleShapeDraw_(ctx: CanvasRenderingContext2D, offsetX: number, offsetY: number){
+        const radiusX = offsetX - this.saved_.x;
+        const radiusY = offsetY - this.saved_.y;
+        const radius = Math.sqrt((radiusX * radiusX) + (radiusY * radiusY));
         ctx.arc(this.saved_.x, this.saved_.y, radius, 0, (2 * Math.PI));
         (this.mode === 'fill') ? ctx.fill() : ctx.stroke();
     }
