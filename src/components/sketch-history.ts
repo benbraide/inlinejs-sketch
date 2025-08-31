@@ -1,5 +1,4 @@
 import { Property, RegisterCustomElement } from "@benbraide/inlinejs-element";
-import { IElementScopeCreatedCallbackParams } from "@benbraide/inlinejs";
 import { SketchPluginElement } from "./sketch-plugin";
 
 export class SketchHistoryElement extends SketchPluginElement{
@@ -89,9 +88,9 @@ export class SketchHistoryElement extends SketchPluginElement{
         image.src = url;
     }
 
-    protected HandleElementScopeCreated_(params: IElementScopeCreatedCallbackParams, postAttributesCallback?: (() => void) | undefined): void {
-        super.HandleElementScopeCreated_(params, postAttributesCallback);
-        params.scope.AddPostProcessCallback(() => this.canvas_ && this.Reset());
+    protected HandlePostProcess_(): void {
+        super.HandlePostProcess_();
+        this.canvas_ && this.Reset();
     }
 
     protected Restore_(src: string){

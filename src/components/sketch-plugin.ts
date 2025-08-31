@@ -1,6 +1,6 @@
 import { CustomElement, Property } from "@benbraide/inlinejs-element";
 import { ISketchPlugin, ISketchPluginParams } from "../types";
-import { FindAncestor, IElementScopeCreatedCallbackParams } from "@benbraide/inlinejs";
+import { FindAncestor, IElementScope } from "@benbraide/inlinejs";
 
 interface ISketchHost extends HTMLElement{
     AddPlugin(plugin: ISketchPlugin): void;
@@ -56,17 +56,18 @@ export class SketchPluginElement extends CustomElement implements ISketchPlugin{
 
     public HandleDraw(params: ISketchPluginParams){}
 
-    protected HandleElementScopeCreated_({ scope, ...rest }: IElementScopeCreatedCallbackParams, postAttributesCallback?: (() => void) | undefined){
-        super.HandleElementScopeCreated_({ scope, ...rest }, () => {
-            this.sketchHost_ = FindAncestor(this, ancestor => ('AddPlugin' in ancestor && 'RemovePlugin' in ancestor)) as ISketchHost | null;
-            this.sketchHost_?.AddPlugin(this);
-            postAttributesCallback && postAttributesCallback();
-        });
+    protected HandleElementScopeDestroyed_(scope: IElementScope): void {
+        super.HandleElementScopeDestroyed_(scope);
+        
+        this.canvas_ = null;
+        this.sketchHost_?.RemovePlugin(this);
+        this.sketchHost_ = null;
+    }
 
-        scope.AddUninitCallback(() => {
-            this.canvas_ = null;
-            this.sketchHost_?.RemovePlugin(this);
-            this.sketchHost_ = null;
-        });
+    protected HandlePostAttributesProcessPostfix_(): void {
+        super.HandlePostAttributesProcessPostfix_();
+
+        this.sketchHost_ = FindAncestor(this, ancestor => ('AddPlugin' in ancestor && 'RemovePlugin' in ancestor)) as ISketchHost | null;
+        this.sketchHost_?.AddPlugin(this);
     }
 }

@@ -1,4 +1,4 @@
-import { IElementScopeCreatedCallbackParams, JournalTry, ToString, ResizeObserver } from "@benbraide/inlinejs";
+import { JournalTry, ToString, ResizeObserver, IElementScope } from "@benbraide/inlinejs";
 import { CustomElement, Property, RegisterCustomElement } from "@benbraide/inlinejs-element";
 import { ISketchPlugin, SketchDrawStageType } from "../types";
 
@@ -77,25 +77,28 @@ export class SketchElement extends CustomElement{
         });
     }
 
-    protected HandleElementScopeCreated_({ scope, ...rest }: IElementScopeCreatedCallbackParams, postAttributesCallback?: (() => void) | undefined){
-        super.HandleElementScopeCreated_({ scope, ...rest }, () => {
-            this.resizeObserver_ = new ResizeObserver();
-            this.resizeObserver_.Observe(this.parentElement || this, () => this.UpdateFit_());
-            postAttributesCallback && postAttributesCallback();
-        });
+    protected HandleElementScopeDestroyed_(scope: IElementScope): void {
+        super.HandleElementScopeDestroyed_(scope);
 
-        scope.AddUninitCallback(() => {
-            this.windowMouseUpHandler_ && window.removeEventListener('mouseup', this.windowMouseUpHandler_);
-            this.windowTouchEndHandler_ && window.removeEventListener('touchend', this.windowTouchEndHandler_);
-            this.windowTouchCancelHandler_ && window.removeEventListener('touchcancel', this.windowTouchCancelHandler_);
-            this.windowMouseUpHandler_ = this.windowTouchEndHandler_ = this.windowTouchCancelHandler_ = null;
-            
-            this.resizeObserver_?.Unobserve(this.parentElement || this);
-            this.resizeObserver_ = null;
-            this.shadow_ = null;
-        });
+        this.windowMouseUpHandler_ && window.removeEventListener('mouseup', this.windowMouseUpHandler_);
+        this.windowTouchEndHandler_ && window.removeEventListener('touchend', this.windowTouchEndHandler_);
+        this.windowTouchCancelHandler_ && window.removeEventListener('touchcancel', this.windowTouchCancelHandler_);
+        this.windowMouseUpHandler_ = this.windowTouchEndHandler_ = this.windowTouchCancelHandler_ = null;
+        
+        this.resizeObserver_?.Unobserve(this.parentElement || this);
+        this.resizeObserver_ = null;
+        this.shadow_ = null;
+    }
 
-        scope.AddPostProcessCallback(() => this.InitializeShadow_());
+    protected HandlePostAttributesProcessPostfix_(): void {
+        super.HandlePostAttributesProcessPostfix_();
+        this.resizeObserver_ = new ResizeObserver();
+        this.resizeObserver_.Observe(this.parentElement || this, () => this.UpdateFit_());
+    }
+
+    protected HandlePostProcess_(): void {
+        super.HandlePostProcess_();
+        this.InitializeShadow_();
     }
 
     protected InitializeShadow_(){

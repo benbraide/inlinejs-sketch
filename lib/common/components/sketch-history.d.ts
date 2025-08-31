@@ -1,4 +1,3 @@
-import { IElementScopeCreatedCallbackParams } from "@benbraide/inlinejs";
 import { SketchPluginElement } from "./sketch-plugin";
 export declare class SketchHistoryElement extends SketchPluginElement {
     protected index_: number;
@@ -16,7 +15,7 @@ export declare class SketchHistoryElement extends SketchPluginElement {
     CanUndo(): boolean;
     CanRedo(): boolean;
     LoadImage(url: any): void;
-    protected HandleElementScopeCreated_(params: IElementScopeCreatedCallbackParams, postAttributesCallback?: (() => void) | undefined): void;
+    protected HandlePostProcess_(): void;
     protected Restore_(src: string): void;
     protected Snapshot_(): void;
 }

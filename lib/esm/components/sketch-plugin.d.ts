@@ -1,6 +1,6 @@
 import { CustomElement } from "@benbraide/inlinejs-element";
 import { ISketchPlugin, ISketchPluginParams } from "../types";
-import { IElementScopeCreatedCallbackParams } from "@benbraide/inlinejs";
+import { IElementScope } from "@benbraide/inlinejs";
 interface ISketchHost extends HTMLElement {
     AddPlugin(plugin: ISketchPlugin): void;
     RemovePlugin(plugin: ISketchPlugin): void;
@@ -18,6 +18,7 @@ export declare class SketchPluginElement extends CustomElement implements ISketc
     HandleBeginDraw(params: ISketchPluginParams): void | boolean;
     HandleEndDraw(params: ISketchPluginParams): void;
     HandleDraw(params: ISketchPluginParams): void;
-    protected HandleElementScopeCreated_({ scope, ...rest }: IElementScopeCreatedCallbackParams, postAttributesCallback?: (() => void) | undefined): void;
+    protected HandleElementScopeDestroyed_(scope: IElementScope): void;
+    protected HandlePostAttributesProcessPostfix_(): void;
 }
 export {};

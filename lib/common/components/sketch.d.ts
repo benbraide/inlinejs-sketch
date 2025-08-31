@@ -1,4 +1,4 @@
-import { IElementScopeCreatedCallbackParams, ResizeObserver } from "@benbraide/inlinejs";
+import { ResizeObserver, IElementScope } from "@benbraide/inlinejs";
 import { CustomElement } from "@benbraide/inlinejs-element";
 import { ISketchPlugin, SketchDrawStageType } from "../types";
 export declare class SketchElement extends CustomElement {
@@ -23,7 +23,9 @@ export declare class SketchElement extends CustomElement {
     GetDataUrl(type?: string): string;
     AddPlugin(plugin: ISketchPlugin): void;
     RemovePlugin(plugin: ISketchPlugin): void;
-    protected HandleElementScopeCreated_({ scope, ...rest }: IElementScopeCreatedCallbackParams, postAttributesCallback?: (() => void) | undefined): void;
+    protected HandleElementScopeDestroyed_(scope: IElementScope): void;
+    protected HandlePostAttributesProcessPostfix_(): void;
+    protected HandlePostProcess_(): void;
     protected InitializeShadow_(): void;
     protected BeginDraw_(offsetX: number, offsetY: number): void;
     protected EndDraw_(offsetX: number, offsetY: number): void;

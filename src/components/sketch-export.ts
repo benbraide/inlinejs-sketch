@@ -1,7 +1,6 @@
 import { Property, RegisterCustomElement } from "@benbraide/inlinejs-element";
 import { SketchPluginElement } from "./sketch-plugin";
 import { ISketchPluginParams } from "../types";
-import { IElementScopeCreatedCallbackParams } from "@benbraide/inlinejs";
 
 export class SketchExportElement extends SketchPluginElement{
     protected hiddenInput_: HTMLInputElement | null = null;
@@ -19,16 +18,14 @@ export class SketchExportElement extends SketchPluginElement{
         this.hiddenInput_ && this.canvas_ && (this.hiddenInput_.value = this.canvas_.toDataURL());
     }
 
-    protected HandleElementScopeCreated_({ scope, ...rest }: IElementScopeCreatedCallbackParams, postAttributesCallback?: (() => void) | undefined): void {
-        super.HandleElementScopeCreated_({ scope, ...rest }, () => {
-            this.hiddenInput_ = document.createElement('input');
-            this.hiddenInput_.type = 'hidden';
-            this.hiddenInput_.name = (this.getAttribute('field') || '');
-            this.hiddenInput_.value = '';
-            this.appendChild(this.hiddenInput_);
-
-            postAttributesCallback && postAttributesCallback();
-        });
+    protected HandlePostAttributesProcessPostfix_(): void {
+        super.HandlePostAttributesProcessPostfix_();
+        
+        this.hiddenInput_ = document.createElement('input');
+        this.hiddenInput_.type = 'hidden';
+        this.hiddenInput_.name = (this.getAttribute('field') || '');
+        this.hiddenInput_.value = '';
+        this.appendChild(this.hiddenInput_);
     }
 }
 
